@@ -4,15 +4,15 @@ import API from "./services/api";
 function App() {
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
+    id: null,
     name: "",
     register_number: "",
     email: "",
     department: "",
-    year:"",
-    phone:"",
+    year: "",
+    phone: "",
   });
 
-  // Fetch students
   const fetchStudents = () => {
     API.get("students/")
       .then((res) => setStudents(res.data))
@@ -23,7 +23,6 @@ function App() {
     fetchStudents();
   }, []);
 
-  // Handle input
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -31,28 +30,59 @@ function App() {
     });
   };
 
-  // Submit form
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    API.post("students/", formData)
-      .then(() => {
-        setFormData({ name: "", email: "", department: "" , register_number: "", year: "", phone: ""});
-        fetchStudents();
-      })
-      .catch((err) => {
-        console.error("Error adding student:", err);
-      });
+    if (formData.id) {
+      // UPDATE
+      API.put(`students/${formData.id}/`, formData)
+        .then(() => {
+          resetForm();
+          fetchStudents();
+        })
+        .catch((err) => console.error(err));
+    } else {
+      // CREATE
+      API.post("students/", formData)
+        .then(() => {
+          resetForm();
+          fetchStudents();
+        })
+        .catch((err) => console.error(err));
+    }
+  };
+
+  const handleEdit = (student) => {
+    setFormData(student);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure?")) {
+      API.delete(`students/${id}/`)
+        .then(fetchStudents)
+        .catch((err) => console.error(err));
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      id: null,
+      name: "",
+      register_number: "",
+      email: "",
+      department: "",
+      year: "",
+      phone: "",
+    });
   };
 
   return (
     <div style={{ padding: "20px" }}>
       <h2>College Management System</h2>
 
-      <h3>Add Student</h3>
+      <h3>{formData.id ? "Edit Student" : "Add Student"}</h3>
       <form onSubmit={handleSubmit}>
         <input
-          type="text"
           name="name"
           placeholder="Name"
           value={formData.name}
@@ -61,8 +91,7 @@ function App() {
         />
         <br /><br />
 
-         <input
-          type="text"
+        <input
           name="register_number"
           placeholder="Register Number"
           value={formData.register_number}
@@ -72,8 +101,8 @@ function App() {
         <br /><br />
 
         <input
-          type="email"
           name="email"
+          type="email"
           placeholder="Email"
           value={formData.email}
           onChange={handleChange}
@@ -82,7 +111,6 @@ function App() {
         <br /><br />
 
         <input
-          type="text"
           name="department"
           placeholder="Department"
           value={formData.department}
@@ -91,8 +119,7 @@ function App() {
         />
         <br /><br />
 
-         <input
-          type="text"
+        <input
           name="year"
           placeholder="Year"
           value={formData.year}
@@ -101,8 +128,7 @@ function App() {
         />
         <br /><br />
 
-         <input
-          type="text"
+        <input
           name="phone"
           placeholder="Phone"
           value={formData.phone}
@@ -111,7 +137,15 @@ function App() {
         />
         <br /><br />
 
-        <button type="submit">Add Student</button>
+        <button type="submit">
+          {formData.id ? "Update" : "Add"}
+        </button>
+
+        {formData.id && (
+          <button type="button" onClick={resetForm}>
+            Cancel
+          </button>
+        )}
       </form>
 
       <hr />
@@ -120,7 +154,11 @@ function App() {
       <ul>
         {students.map((student) => (
           <li key={student.id}>
-            {student.name} - {student.email} ({student.department}) - {student.year} - {student.phone}
+            {student.name} - {student.email} ({student.department})
+            {" "}
+            <button onClick={() => handleEdit(student)}>Edit</button>
+            {" "}
+            <button onClick={() => handleDelete(student.id)}>Delete</button>
           </li>
         ))}
       </ul>

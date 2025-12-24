@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import API from "./services/api";
+import Login from "./pages/Login";
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem("access_token")
+  );
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
     id: null,
@@ -16,12 +20,14 @@ function App() {
   const fetchStudents = () => {
     API.get("students/")
       .then((res) => setStudents(res.data))
-      .catch((err) => console.error(err));
+      .catch(() => setIsAuthenticated(false));
   };
 
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    if (isAuthenticated) {
+      fetchStudents();
+    }
+  }, [isAuthenticated]);
 
   const handleChange = (e) => {
     setFormData({
@@ -33,52 +39,34 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (formData.id) {
-      // UPDATE
-      API.put(`students/${formData.id}/`, formData)
-        .then(() => {
-          resetForm();
-          fetchStudents();
-        })
-        .catch((err) => console.error(err));
+     if (formData.id) {
+      API.put(`students/${formData.id}/`, formData).then(fetchStudents);
     } else {
-      // CREATE
-      API.post("students/", formData)
-        .then(() => {
-          resetForm();
-          fetchStudents();
-        })
-        .catch((err) => console.error(err));
+      API.post("students/", formData).then(fetchStudents);
     }
+
+    setFormData({ id: null, name: "", email: "", department: "" });
   };
 
-  const handleEdit = (student) => {
-    setFormData(student);
-  };
+  const handleEdit = (student) => setFormData(student);
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure?")) {
-      API.delete(`students/${id}/`)
-        .then(fetchStudents)
-        .catch((err) => console.error(err));
-    }
+    API.delete(`students/${id}/`).then(fetchStudents);
   };
 
-  const resetForm = () => {
-    setFormData({
-      id: null,
-      name: "",
-      register_number: "",
-      email: "",
-      department: "",
-      year: "",
-      phone: "",
-    });
+    const logout = () => {
+    localStorage.clear();
+    setIsAuthenticated(false);
   };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>College Management System</h2>
+      <h2>College Management System(Admin)</h2>
+      <button onClick={logout}>Logout</button>
 
       <h3>{formData.id ? "Edit Student" : "Add Student"}</h3>
       <form onSubmit={handleSubmit}>
@@ -140,25 +128,17 @@ function App() {
         <button type="submit">
           {formData.id ? "Update" : "Add"}
         </button>
-
-        {formData.id && (
-          <button type="button" onClick={resetForm}>
-            Cancel
-          </button>
-        )}
       </form>
 
-      <hr />
+      
 
       <h3>Student List</h3>
-      <ul>
-        {students.map((student) => (
-          <li key={student.id}>
-            {student.name} - {student.email} ({student.department})
-            {" "}
-            <button onClick={() => handleEdit(student)}>Edit</button>
-            {" "}
-            <button onClick={() => handleDelete(student.id)}>Delete</button>
+       <ul>
+        {students.map((s) => (
+          <li key={s.id}>
+            {s.name} ({s.department})
+            <button onClick={() => handleEdit(s)}>Edit</button>
+            <button onClick={() => handleDelete(s.id)}>Delete</button>
           </li>
         ))}
       </ul>
